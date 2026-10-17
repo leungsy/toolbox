@@ -88,9 +88,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;b
 /* top bar */
 .topbar{display:flex;align-items:center;gap:.75rem;padding:.55rem 1rem;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
 .brand{font-family:var(--font-display);font-weight:700;font-size:1.05rem;white-space:nowrap;display:flex;align-items:center;gap:.5rem}
-.brand .mark{width:1.35rem;height:1rem;border:1.5px solid var(--ink);border-radius:2px;position:relative;background:var(--card)}
-.brand .mark::before{content:"";position:absolute;left:0;right:0;top:.22rem;border-top:1.5px solid var(--margin)}
-.brand .mark::after{content:"";position:absolute;left:.15rem;right:.15rem;top:.5rem;height:.25rem;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.brand .mark{width:32px;height:32px;flex:none;display:inline-flex}
+.brand .mark svg{width:32px;height:32px;display:block}
 .titlebox{flex:1 1 auto;min-width:0}
 .titlebox input{font-family:var(--font-display);font-size:1.05rem;font-weight:600;border-color:transparent;background:transparent;padding:.25rem .45rem;min-height:2rem}
 .titlebox input:hover{border-color:var(--line)}
@@ -153,6 +152,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;b
 .audopt label{flex:1;cursor:pointer;display:flex;gap:.5rem;align-items:center;font-size:.92rem}
 .audopt input{accent-color:var(--ink);width:1.05rem;height:1.05rem}
 .audopt .pri{font-size:.75rem;border:1px solid var(--line-strong);border-radius:999px;padding:.05rem .5rem;background:transparent;cursor:pointer;color:var(--muted)}
+.audopt.addaud{border-style:dashed;border-color:var(--line-strong);background:var(--card-2);cursor:pointer;font-size:.92rem;color:var(--ink);justify-content:flex-start;gap:.45rem}
+.audopt.addaud svg{width:1em;height:1em}
+.audopt.custom label{font-style:normal}
 .audopt .pri.on{background:var(--hi);border-color:var(--hi);color:#192640;font-weight:600}
 .profile{border:1px solid var(--line);border-radius:var(--r);margin-top:.6rem;background:var(--card)}
 .profile summary{cursor:pointer;padding:.55rem .8rem;font-weight:600;display:flex;gap:.5rem;align-items:center}
@@ -186,6 +188,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;b
 .node:hover .acts,.node:focus-within .acts{opacity:1}
 .node .mins{font-size:.78rem;color:var(--muted);white-space:nowrap;width:3.2rem;text-align:right}
 .node .linkmark{font-size:.72rem;color:var(--info);white-space:nowrap}
+.node .alsomark{font-size:.74rem;color:var(--muted);white-space:nowrap;max-width:14rem;overflow:hidden;text-overflow:ellipsis}
+.chip[disabled]{cursor:default;opacity:.85}
 .root-node{font-family:var(--font-display);font-weight:600;padding:.5rem .6rem;background:var(--hi-soft);border-radius:var(--r-sm);margin-bottom:.4rem;display:flex;gap:.5rem}
 .root-node .kind{font-size:.7rem;color:var(--muted);font-family:var(--font-body);width:3.6rem;flex:none;padding-top:.15rem}
 .addrow{display:flex;gap:.35rem;margin:.25rem 0 .35rem 4rem;flex-wrap:wrap}
@@ -337,7 +341,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;b
   .node input[type=text]{flex:1 1 calc(100% - 3.2rem)}
   .node .acts{opacity:1;width:100%;justify-content:flex-end;flex-wrap:wrap}
   .node .mins{display:none}
-  .node .linkmark{display:none}
+  .node .linkmark,.node .alsomark{display:none}
   .addrow{margin-left:1rem}
   .writing-for{position:static}
   .side-inner{top:0}
@@ -475,6 +479,17 @@ var PptxGenJS=(S=>{function p(e,l,s,n){return new(s=s||Promise)(function(a,A){fu
 (function () {
 'use strict';
 /* ---------- reference data ---------- */
+/* Pixel cue card logo: same 16x16 drawing as the browser-tab icon in <head> */
+const PIXEL_CARD = '<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">'
+  + '<rect x="2" y="4" width="14" height="10" fill="#8794A8"/>'   // shadow
+  + '<rect x="1" y="3" width="14" height="10" fill="#192640"/>'   // outline
+  + '<rect x="2" y="4" width="12" height="8" fill="#FFFFFF"/>'    // card
+  + '<rect x="2" y="5" width="12" height="1" fill="#C8433A"/>'    // red header rule
+  + '<rect x="3" y="7" width="6" height="1" fill="#F6D945"/>'     // highlighted question
+  + '<rect x="10" y="7" width="3" height="1" fill="#8FB0D6"/>'    // ruled lines
+  + '<rect x="3" y="9" width="10" height="1" fill="#8FB0D6"/>'
+  + '<rect x="3" y="11" width="7" height="1" fill="#8FB0D6"/>'
+  + '</svg>';
 const AUDIENCES = [
   { id:'lp', label:'Students (lower primary)', short:'Lower primary',
     k:'Everyday experiences; very little subject knowledge',
@@ -547,6 +562,7 @@ const AUDIENCES = [
     w:'Define all terms. Use analogies.',
     engage:'Rhetorical and "what if?" questions', fam:'' }
 ];
+const PROFILE_HINTS = { k: 'What do they already know?', e: 'What are they expecting from you?', a: 'How do they feel about this topic?', r: 'How formal or technical should you be?', w: 'What could lose them?' };
 const PROFILE_FIELDS = [
   ['k','Knows'], ['e','Expects'], ['a','Attitude'], ['r','Register'], ['w','Watch-outs']
 ];
@@ -599,12 +615,12 @@ const FORMATS = [ ['inperson','In person'], ['online','Online'], ['hybrid','Hybr
 const TOPIC_WORDS = ['overview','background','introduction','intro','agenda','summary','conclusion','context','outline','objectives','objective','q&a','questions','thank you','thanks','recap','next steps','update','updates'];
 
 const STEPS = [
-  { id:'brief', n:1, label:'Brief', sub:'Who is in the room, why you are speaking, and what should change.' },
-  { id:'message', n:2, label:'Message', sub:'The one idea, what must land, and what you will leave out.' },
-  { id:'structure', n:3, label:'Structure', sub:'Build the argument as a tree. The audience hears it as a line.' },
-  { id:'slides', n:4, label:'Slides', sub:'Each slide answers one question the audience hasn\'t asked yet.' },
-  { id:'review', n:5, label:'Review', sub:'Read the anchor lines alone. They should tell the whole story.' },
-  { id:'export', n:6, label:'Export', sub:'Take the plan into PowerPoint, Word, cue cards or a review.' }
+  { id:'brief', n:1, label:'Brief', sub:'' },
+  { id:'message', n:2, label:'Message', sub:'' },
+  { id:'structure', n:3, label:'Structure', sub:'Build it as a tree; deliver it as a line.' },
+  { id:'slides', n:4, label:'Slides', sub:'Each slide answers one unasked question.' },
+  { id:'review', n:5, label:'Review', sub:'The anchor lines alone should tell the story.' },
+  { id:'export', n:6, label:'Export', sub:'' }
 ];
 
 const DEFAULT_THRESHOLDS = { msgWords:15, andThenPct:40, timeTol:10, openMax:20, closeMin:10, mustMax:70, maxPoints:3, anchorMinWords:5 };
@@ -622,7 +638,14 @@ const slug = s => (String(s || 'presentation').toLowerCase().replace(/[^a-z0-9]+
 const plural = (n, w, p) => n + ' ' + (n === 1 ? w : (p || w + 's'));
 const fmtMin = m => { m = Math.round((+m || 0) * 10) / 10; return (m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)) + ' min'; };
 const opt = (pairs, val) => pairs.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(val || '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
-const audById = id => AUDIENCES.find(a => a.id === id);
+/* audiences: ready-made presets, ones saved in Settings, and ones typed into a presentation */
+function presCustomAud(id) { try { for (const q of library) { const a = (q.brief.customAud || []).find(x => x.id === id); if (a) return a; } } catch (e) {} return null; }
+const audById = id => AUDIENCES.find(a => a.id === id) || (settings.customAudiences || []).find(a => a.id === id) || presCustomAud(id);
+function mkCustomAud(label) { return { id: 'u' + Math.random().toString(36).slice(2, 9), label, short: label, k: '', e: '', a: '', r: '', w: '', engage: '', fam: '', custom: true }; }
+function audiencesFor(p) {
+  const saved = settings.customAudiences || [];
+  return AUDIENCES.concat(saved, (p.brief.customAud || []).filter(a => !saved.some(s => s.id === a.id)));
+}
 const purposeById = id => PURPOSES.find(p => p.id === id);
 
 /* ---------- storage ---------- */
@@ -639,7 +662,7 @@ function store(k, v) {
 /* ---------- settings ---------- */
 function defaultSettings() {
   return { sv:2, tips:true, author:'', defaultDuration:5, minPerSlide:1.5, defaultAudience:'', textSize:'m', theme:'auto',
-    presetOverrides:{}, customStructures:[], thresholds:clone(DEFAULT_THRESHOLDS) };
+    presetOverrides:{}, customStructures:[], customAudiences:[], thresholds:clone(DEFAULT_THRESHOLDS) };
 }
 let settings = (() => {
   const saved = load('settings', {}) || {};
@@ -682,6 +705,7 @@ function newPresentation(title) {
     p.brief.primary = settings.defaultAudience;
     p.brief.profiles[settings.defaultAudience] = presetFor(settings.defaultAudience);
     p.brief.familiarity = audById(settings.defaultAudience).fam || '';
+    if (audById(settings.defaultAudience).custom) p.brief.customAud = [clone(audById(settings.defaultAudience))];
   }
   return p;
 }
@@ -691,7 +715,7 @@ function newNode(type, parentId, title) {
   if (type === 'slide') Object.assign(n, {
     question: title || '', anchor: '', transition: '', transType: '', points: [''],
     evidence: '', evType: '', numContext: '', visual: '', analogy: '', engage: '', engageType: '',
-    minutes: settings.minPerSlide, priority: 'should', role: '', mustLand: [], objections: [], audiences: []
+    minutes: settings.minPerSlide, priority: 'should', role: '', mustLand: [], objections: [], audiences: [], supports: []
   });
   return n;
 }
@@ -765,7 +789,12 @@ function removeNode(p, id) {
   while (grew) { grew = false; p.nodes.forEach(n => { if (n.parentId && kill.has(n.parentId) && !kill.has(n.id)) { kill.add(n.id); grew = true; } }); }
   p.nodes = p.nodes.filter(n => !kill.has(n.id));
   p.links = p.links.filter(l => !kill.has(l.from) && !kill.has(l.to));
+  p.nodes.forEach(n => { if (n.supports) n.supports = n.supports.filter(x => !kill.has(x)); });
 }
+/* multi-pillar slides: a slide has one home (where it sits) and may support other pillars */
+function alsoSupports(p, s) { const home = pillarOf(p, s); return (s.supports || []).map(id => nodeById(p, id)).filter(n => n && n.type === 'pillar' && (!home || n.id !== home.id)); }
+function coveredPillars(p, s) { const home = pillarOf(p, s); return (home ? [home] : []).concat(alsoSupports(p, s)); }
+function pillarSlides(p, pl) { const own = descSlides(p, pl.id); return own.concat(p.nodes.filter(n => n.type === 'slide' && (n.supports || []).includes(pl.id) && !own.includes(n))); }
 /* move among siblings (dir -1 / +1) */
 function moveSibling(p, id, dir) {
   const n = nodeById(p, id); if (!n) return false;
@@ -786,6 +815,7 @@ function canParent(type, parent) {
 function reparent(p, id, newParentId, afterId) {
   const n = nodeById(p, id); if (!n) return;
   n.parentId = newParentId || null;
+  if (n.supports) n.supports = n.supports.filter(x => x !== newParentId);
   p.nodes.splice(p.nodes.indexOf(n), 1);
   if (afterId) { const k = p.nodes.indexOf(nodeById(p, afterId)); p.nodes.splice(k + 1, 0, n); }
   else p.nodes.push(n);
@@ -904,7 +934,7 @@ function runChecks(p) {
   const secs = sections(p);
   if (!secs.length) add('s-none', 'Structure', 'warn', 'No sections yet. Choose a structure or build your own.', 'structure');
   secs.forEach(s => { if (!descSlides(p, s.id).length) add('s-empty-' + s.id, 'Structure', 'warn', `Section "${trimTo(nodeLabel(s), 30)}" has no slides.`, 'structure', s.id); });
-  p.nodes.filter(n => n.type === 'pillar').forEach(pl => { if (!descSlides(p, pl.id).length) add('s-pill-' + pl.id, 'Structure', 'warn', `Pillar "${trimTo(nodeLabel(pl), 30)}" has no slides.`, 'structure', pl.id); });
+  p.nodes.filter(n => n.type === 'pillar').forEach(pl => { if (!pillarSlides(p, pl).length) add('s-pill-' + pl.id, 'Structure', 'warn', `Pillar "${trimTo(nodeLabel(pl), 30)}" has no slides.`, 'structure', pl.id); });
   (b.objections || []).filter(o => String(o.text || '').trim()).forEach(o => {
     if (!allSlides.some(s => (s.objections || []).includes(o.id)))
       add('s-obj-' + o.id, 'Structure', 'warn', `Objection not answered: "${trimTo(o.text, 45)}". Tick it on the slide that addresses it.`, 'slides');
@@ -928,6 +958,8 @@ function runChecks(p) {
   /* Slides */
   slides.forEach((s, i) => {
     const n = i + 1, lbl = `Slide ${n}`;
+    const cov = coveredPillars(p, s);
+    if (cov.length >= 3) add('sl-multi-' + s.id, 'Slides', 'warn', `${lbl} covers ${cov.length} pillars. One slide doing ${cov.length} jobs is hard to remember; consider splitting it.`, 'slides', s.id);
     if (!String(s.anchor || '').trim()) add('sl-anc-' + s.id, 'Slides', 'warn', `${lbl}: no anchor statement.`, 'slides', s.id);
     else if (isTopicHeadline(s.anchor)) add('sl-topic-' + s.id, 'Slides', 'info', `${lbl}: anchor reads like a topic ("${trimTo(s.anchor, 30)}"). Make it a claim.`, 'slides', s.id);
     if (i < slides.length - 1 && !String(s.transition || '').trim()) add('sl-tr-' + s.id, 'Slides', 'warn', `${lbl}: no transition statement into the next slide.`, 'slides', s.id);
@@ -956,7 +988,7 @@ function runChecks(p) {
   /* Relevance: evidence variety per pillar (or section where there are no pillars) */
   const groups = p.nodes.filter(n => n.type === 'pillar').concat(secs.filter(s => !children(p, s.id).some(c => c.type === 'pillar')));
   groups.forEach(g => {
-    const types = descSlides(p, g.id).map(s => s.evType).filter(Boolean);
+    const types = (g.type === 'pillar' ? pillarSlides(p, g) : descSlides(p, g.id)).map(s => s.evType).filter(Boolean);
     if (types.length >= 2 && new Set(types).size === 1) {
       const t = (EV_TYPES.find(e => e[0] === types[0]) || [])[1] || types[0];
       add('r-ev-' + g.id, 'Relevance', 'info', `"${trimTo(nodeLabel(g), 28)}" relies only on ${t.toLowerCase()}s. Mix in another type of evidence.`, 'slides');
@@ -1087,7 +1119,7 @@ function renderLibrary() {
   return `<div class="lib">
     ${!storageOK ? `<div class="banner err">This browser is blocking storage, so autosave is off. Use <b>Save file</b> to keep your work.</div>` : ''}
     <div class="libhead">
-      <div class="brand" style="font-size:1rem"><span class="mark"></span>PrezyAssist</div>
+      <div class="brand" style="font-size:1rem"><span class="mark">${PIXEL_CARD}</span>PrezyAssist</div>
     </div>
     <div class="libhead">
       <h1>Your presentations</h1>
@@ -1097,7 +1129,7 @@ function renderLibrary() {
     </div>
     ${list.length ? `<div class="libgrid">${cards}</div>` : `<div class="libempty"><h2>Start with your audience</h2><p class="muted">Every plan begins with one question: what does my audience need to hear from me?</p><button class="btn primary" data-act="new">${ICON.plus} New presentation</button></div>`}
     <div class="libfoot">
-      <p class="note">Plans autosave in this browser on this computer. Browser storage can be wiped (for example when browsing data is cleared), so back up regularly. If you move this file, its autosave stays behind — use Back up all and Restore.</p>
+      <p class="note">Plans autosave in this browser. Clearing browsing data wipes them, so back up regularly.</p>
       <button class="btn" data-act="backup">Back up all</button>
       <button class="btn" data-act="restore">Restore</button>
       <button class="btn" data-act="settings">${ICON.gear} Settings</button>
@@ -1112,7 +1144,7 @@ function renderApp() {
   const n = activeChecks(p).length;
   return `<header class="topbar">
       <button class="btn ghost sm" data-act="library" title="Back to your presentations">${ICON.back} Library</button>
-      <div class="brand"><span class="mark"></span><span class="sr">PrezyAssist</span></div>
+      <div class="brand"><span class="mark">${PIXEL_CARD}</span><span class="sr">PrezyAssist</span></div>
       <div class="titlebox"><label class="sr" for="ptitle">Presentation title</label><input id="ptitle" type="text" data-bind="title" value="${esc(p.title)}"></div>
       <span id="saved" class="saved"></span>
       ${ui.undo.length ? `<button class="btn sm" data-act="undo" title="Undo the last clear or delete">${ICON.undo} Undo</button>` : ''}
@@ -1173,7 +1205,7 @@ function renderStep(p) {
   const s = STEPS.find(x => x.id === ui.step) || STEPS[0];
   const clearable = ['brief', 'message', 'structure', 'slides'].includes(s.id);
   const body = { brief: stepBrief, message: stepMessage, structure: stepStructure, slides: stepSlides, review: stepReview, export: stepExport }[s.id](p);
-  return `${hybridBanner(p)}<div class="mainhead"><h2>${s.n}. ${s.label}<div class="sub">${esc(s.sub)}</div></h2>
+  return `${hybridBanner(p)}<div class="mainhead"><h2>${s.n}. ${s.label}${s.sub ? `<div class="sub">${esc(s.sub)}</div>` : ''}</h2>
     ${clearable ? `<button class="btn sm danger" data-act="clearstep">Clear this step</button>` : ''}</div>${body}`;
 }
 
@@ -1181,41 +1213,43 @@ function renderStep(p) {
 function stepBrief(p) {
   const b = p.brief, f = audFlags(p), pu = purposeById(b.purpose);
   const sug = Math.max(1, Math.round((+b.duration || 0) / (+settings.minPerSlide || 1.5)));
-  const audGrid = AUDIENCES.map(a => {
-    const on = b.audiences.includes(a.id), pri = b.primary === a.id;
-    return `<div class="audopt${on ? ' on' : ''}"><label><input type="checkbox" data-act="aud" data-id="${a.id}" ${on ? 'checked' : ''}>${esc(a.label)}</label>
-      ${on ? `<button class="pri${pri ? ' on' : ''}" data-act="primary" data-id="${a.id}" aria-pressed="${pri}">${pri ? 'Primary' : 'Make primary'}</button>` : ''}</div>`;
-  }).join('');
+  const savedIds = (settings.customAudiences || []).map(a => a.id);
+  const audGrid = audiencesFor(p).map(a => {
+    const on = b.audiences.includes(a.id), pri = b.primary === a.id, ownOnly = a.custom && !savedIds.includes(a.id);
+    return `<div class="audopt${on ? ' on' : ''}${a.custom ? ' custom' : ''}"><label><input type="checkbox" data-act="aud" data-id="${a.id}" ${on ? 'checked' : ''}>${esc(a.label)}</label>
+      ${on ? `<button class="pri${pri ? ' on' : ''}" data-act="primary" data-id="${a.id}" aria-pressed="${pri}">${pri ? 'Primary' : 'Make primary'}</button>` : ''}
+      ${ownOnly ? `<button class="btn ghost icon sm" data-act="audrm" data-id="${a.id}" aria-label="Remove ${esc(a.label)}" title="Remove from this presentation">${ICON.x}</button>` : ''}</div>`;
+  }).join('') + `<button class="audopt addaud" data-act="audadd">${ICON.plus} Other audience</button>`;
   const ordered = b.audiences.slice().sort((x, y) => (x === b.primary ? -1 : y === b.primary ? 1 : 0));
   const profiles = ordered.map(id => {
-    const a = audById(id), pr = b.profiles[id] || presetFor(id);
+    const a = audById(id) || { label: 'Audience', short: 'Audience' }, pr = b.profiles[id] || presetFor(id);
     return `<details class="profile" ${id === b.primary ? 'open' : ''}><summary>${esc(a.label)} ${id === b.primary ? '<span class="tag">Primary</span>' : ''}</summary>
-      <div class="pbody"><div class="kv">${PROFILE_FIELDS.map(([k, l]) => `<label for="pf-${id}-${k}">${l}</label><textarea id="pf-${id}-${k}" class="autosize" rows="1" data-prof="${id}" data-f="${k}">${esc(pr[k])}</textarea>`).join('')}</div>
-      <div class="row" style="margin-top:.5rem"><span class="small muted grow tip">Engagement ideas: ${esc(a.engage)}</span><button class="btn sm ghost" data-act="profreset" data-id="${id}">Reset to preset</button></div></div></details>`;
+      <div class="pbody"><div class="kv">${PROFILE_FIELDS.map(([k, l]) => `<label for="pf-${id}-${k}">${l}</label><textarea id="pf-${id}-${k}" class="autosize" rows="1" data-prof="${id}" data-f="${k}" placeholder="${esc(PROFILE_HINTS[k])}">${esc(pr[k])}</textarea>`).join('')}</div>
+      <div class="row" style="margin-top:.5rem"><span class="small muted grow tip">${a.engage ? 'Engagement ideas: ' + esc(a.engage) : ''}</span>${a.custom && !savedIds.includes(id) ? `<button class="btn sm ghost" data-act="audsave" data-id="${id}">Keep for future presentations</button>` : `<button class="btn sm ghost" data-act="profreset" data-id="${id}">${a.custom ? 'Reset to saved' : 'Reset to preset'}</button>`}</div></div></details>`;
   }).join('');
   let hints = '';
   if (f.hod && !f.pvp) hints += `<div class="banner info">P/VP usually sit in on SMC items. <button class="btn sm" data-act="addpvp">Add P/VP as a secondary audience</button></div>`;
-  if (f.pvpOnly) hints += `<div class="banner info" style="display:block"><b>P/VP only.</b> They are the decision-makers here: expect a conversation with interruptions. Lead with your recommendation, keep the main deck short, and put detail in a Backup section.
+  if (f.pvpOnly) hints += `<div class="banner info" style="display:block"><b>P/VP only.</b> Expect interruptions. Lead with your recommendation; put detail in a Backup section.
       <div style="margin-top:.5rem"><label class="toggle"><input type="checkbox" data-act="smc" ${b.smcLater ? 'checked' : ''}> Going to SMC later</label></div>
       ${b.smcLater ? `<div class="field" style="margin:.6rem 0 0"><label class="f" for="smcp">What will HODs push back on?</label><textarea id="smcp" class="autosize" rows="2" data-bind="brief.smcPushback">${esc(b.smcPushback)}</textarea></div>` : ''}</div>`;
   return `
-  <section class="panel"><h3>Who is in the room?</h3><p class="panel-sub">Tick everyone who will be there, then mark one as primary. Their needs decide the content.</p>
+  <section class="panel"><h3>Who is in the room?</h3><p class="panel-sub">Mark one as primary; their needs decide the content.</p>
     <div class="audgrid">${audGrid}</div>${hints ? '<div style="margin-top:.8rem">' + hints + '</div>' : ''}
-    ${ordered.length ? `<div style="margin-top:1rem"><h4>What they know, expect and feel</h4><p class="small muted tip" style="margin:.2rem 0 0">Pre-filled from the presets. Edit these for this presentation; change the defaults in Settings.</p>${profiles}</div>` : ''}
+    ${ordered.length ? `<div style="margin-top:1rem"><h4>What they know, expect and feel</h4><p class="small muted tip" style="margin:.2rem 0 0">Pre-filled; edit for this presentation.</p>${profiles}</div>` : ''}
     ${ordered.length ? `<div class="field" style="margin:1rem 0 0;max-width:24rem"><label class="f" for="fam">How well does ${b.audiences.length > 1 ? 'your primary audience' : 'this audience'} know you?</label><select id="fam" data-bind="brief.familiarity" data-rerender="1">${opt(FAMILIARITY, b.familiarity)}</select></div>` : ''}
   </section>
-  <section class="panel"><h3>Why are you speaking?</h3><p class="panel-sub">Your purpose suggests a structure and sets what the closing slide must do.</p>
+  <section class="panel"><h3>Why are you speaking?</h3><p class="panel-sub">Sets the suggested structure and the closing slide.</p>
     <div class="purposes">${PURPOSES.map(x => `<button class="purpose" data-act="purpose" data-id="${x.id}" aria-pressed="${b.purpose === x.id}"><b>${esc(x.label)}</b><span>${esc(x.hint)}</span></button>`).join('')}</div>
     ${pu ? `<p class="small" style="margin:.7rem 0 0">Suggested structure: <b>${esc((structById(pu.structure) || {}).name || '')}</b>. Closing slide must be: <b>${esc(CLOSING_LABEL[pu.closing])}</b>.</p>` : ''}
   </section>
   <section class="panel"><h3>Context</h3>
     <div class="grid3">
-      <div class="field"><label class="f" for="dur">Duration (minutes)</label><input id="dur" type="number" min="1" max="240" step="1" data-bind="brief.duration" value="${esc(b.duration)}"><span class="help" style="margin-top:.3rem">About ${sug} slides at ${settings.minPerSlide} min each</span></div>
+      <div class="field"><label class="f" for="dur">Duration (minutes)</label><input id="dur" type="number" min="1" max="240" step="1" data-bind="brief.duration" value="${esc(b.duration)}"><span class="help" style="margin-top:.3rem">About ${sug} slides</span></div>
       <div class="field"><label class="f" for="fmt">Format</label><select id="fmt" data-bind="brief.format">${opt(FORMATS, b.format)}</select></div>
       <div class="field"><label class="f" for="setg">Setting</label><input id="setg" type="text" data-bind="brief.setting" value="${esc(b.setting)}" placeholder="e.g. SMC meeting, school hall, PD workshop"></div>
     </div>
   </section>
-  <section class="panel"><h3>What should change?</h3><p class="panel-sub">When they leave, what should they think, feel and do differently?</p>
+  <section class="panel"><h3>What should change?</h3>
     <div class="grid3">
       <div class="field"><label class="f" for="g-t">Think</label><textarea id="g-t" class="autosize" rows="2" data-bind="brief.think">${esc(b.think)}</textarea></div>
       <div class="field"><label class="f" for="g-f">Feel</label><textarea id="g-f" class="autosize" rows="2" data-bind="brief.feel">${esc(b.feel)}</textarea></div>
@@ -1224,7 +1258,7 @@ function stepBrief(p) {
   </section>
   <section class="panel"><h3>Their side of the room</h3>
     <div class="field"><label class="f" for="bel">What do they already believe that you need to shift?</label><textarea id="bel" class="autosize" rows="2" data-bind="brief.beliefs">${esc(b.beliefs)}</textarea></div>
-    <label class="f">What will they push back on?</label><span class="help">Each objection becomes a check: some slide has to answer it.</span>
+    <label class="f">What will they push back on?</label><span class="help">Each one must be answered by a slide.</span>
     <div class="listedit">${(b.objections || []).map((o, i) => `<div class="li"><span class="bullet">${i + 1}</span><textarea class="autosize" rows="1" data-obj="${o.id}" aria-label="Objection ${i + 1}">${esc(o.text)}</textarea><button class="btn ghost icon sm" data-act="objdel" data-id="${o.id}" aria-label="Remove objection">${ICON.x}</button></div>`).join('')}</div>
     <button class="btn sm" data-act="objadd">${ICON.plus} Add objection</button>
   </section>`;
@@ -1235,18 +1269,18 @@ function stepMessage(p) {
   const m = p.message, T = settings.thresholds, w = words(m.core);
   const must = m.mustLand || [];
   return `
-  <section class="panel"><h3>Core message</h3><p class="panel-sub">Can you say it in ${T.msgWords} words without jargon? Try saying it out loud to a Sec 1 student.</p>
+  <section class="panel"><h3>Core message</h3><p class="panel-sub">No jargon. Could a Sec 1 student repeat it?</p>
     <textarea id="core" class="autosize" rows="2" data-bind="message.core" data-counter="words" placeholder="One sentence your audience could repeat to someone else.">${esc(m.core)}</textarea>
     <div class="counter${w > T.msgWords ? ' over' : ''}" id="core-count">${w} / ${T.msgWords} words</div>
   </section>
-  <section class="panel"><h3>Must land</h3><p class="panel-sub">The least they must walk away with. If they forget everything else, what must they still remember? Three at most.</p>
+  <section class="panel"><h3>Must land</h3><p class="panel-sub">If they forget everything else, what must they remember?</p>
     <div class="listedit">${must.map((x, i) => `<div class="li must"><span class="bullet">${i + 1}</span><textarea class="autosize" rows="1" data-must="${x.id}" aria-label="Must-land point ${i + 1}">${esc(x.text)}</textarea><button class="btn ghost icon sm" data-act="mustdel" data-id="${x.id}" aria-label="Remove point">${ICON.x}</button></div>`).join('')}</div>
     ${must.length < 3 ? `<button class="btn sm" data-act="mustadd">${ICON.plus} Add must-land point</button>` : `<p class="small muted tip">Three is the limit. If a fourth feels essential, one of these isn't.</p>`}
   </section>
-  <section class="panel"><h3>Out of scope</h3><p class="panel-sub">What are you deliberately leaving out, and why? Naming it stops it creeping back in.</p>
+  <section class="panel"><h3>Out of scope</h3><p class="panel-sub">What are you leaving out, and why?</p>
     <textarea class="autosize" rows="2" data-bind="message.outOfScope">${esc(m.outOfScope)}</textarea>
   </section>
-  <section class="panel"><h3>Emotional hook</h3><p class="panel-sub">What should they feel? Benefits are emotional: time saved, students helped, risk avoided.</p>
+  <section class="panel"><h3>Emotional hook</h3><p class="panel-sub">Benefits are emotional: time saved, students helped, risk avoided.</p>
     <textarea class="autosize" rows="2" data-bind="message.hook">${esc(m.hook)}</textarea>
   </section>`;
 }
@@ -1262,9 +1296,9 @@ function stepStructure(p) {
   const own = !hasTree ? `<button class="struct own" data-act="ownstruct"><b>${ICON.plus.replace('<svg', '<svg style="width:.9em;height:.9em;vertical-align:-1px"')} Build my own</b><span class="secs">Start with a blank section and name your own parts</span></button>` : '';
   const chooser = `${mine.length || own ? `<h4 class="structgroup">My structures</h4><div class="structs">${own}${mine.map(card).join('')}</div>` : ''}
     <h4 class="structgroup">Ready-made structures</h4><div class="structs">${built.map(card).join('')}</div>
-    <p class="tiny muted tip" style="margin:.6rem 0 0">Choosing a structure adds its sections to the outline. Save any outline as your own structure to reuse it in future presentations.</p>`;
+    `;
   return `
-  <section class="panel">${hasTree ? `<details><summary style="cursor:pointer;font-family:var(--font-display);font-weight:600">Add a structure${p.structureId && structById(p.structureId) ? ` <span class="small muted" style="font-family:var(--font-body);font-weight:400">(current: ${esc(structById(p.structureId).name)})</span>` : ''}</summary><div style="margin-top:.75rem">${chooser}</div></details>` : `<h3>Choose a structure, or build your own</h3><p class="panel-sub">Structure helps you remember what comes next, and helps the audience follow.</p>${chooser}`}</section>
+  <section class="panel">${hasTree ? `<details><summary style="cursor:pointer;font-family:var(--font-display);font-weight:600">Add a structure${p.structureId && structById(p.structureId) ? ` <span class="small muted" style="font-family:var(--font-body);font-weight:400">(current: ${esc(structById(p.structureId).name)})</span>` : ''}</summary><div style="margin-top:.75rem">${chooser}</div></details>` : `<h3>Choose a structure, or build your own</h3>${chooser}`}</section>
   <section class="panel">
     <div class="row" style="margin-bottom:.75rem"><h3 class="grow" style="margin:0">Outline</h3>
       <div class="row" role="group" aria-label="View"><button class="chip" data-act="seqview" data-v="0" aria-pressed="${!ui.seqView}">Tree</button><button class="chip" data-act="seqview" data-v="1" aria-pressed="${ui.seqView}">Delivery order</button></div>
@@ -1283,6 +1317,7 @@ function renderTree(p) {
     const lk = linked(n.id);
     return `<div class="node ${n.type}" data-node="${n.id}"><span class="kind">${kind}</span>
       <input type="text" data-nbind="${field}" data-id="${n.id}" value="${esc(n[field])}" placeholder="${ph}" aria-label="${kind} title">
+      ${n.type === 'slide' && alsoSupports(p, n).length ? `<span class="alsomark" title="Also supports these pillars">+ ${esc(alsoSupports(p, n).map(x => trimTo(nodeLabel(x), 18)).join(', '))}</span>` : ''}
       ${lk ? `<span class="linkmark" title="Cross-links">${ICON.link.replace('<svg', '<svg style="width:.9em;height:.9em;vertical-align:-1px"')} ${lk}</span>` : ''}
       <span class="mins">${n.type === 'slide' ? fmtMin(n.minutes) : mins(n.id)}</span>
       <span class="acts">
@@ -1329,12 +1364,12 @@ function renderSequence(p) {
       <button class="btn ghost icon sm" data-act="ndown" data-id="${s.id}" ${i >= all.length - 1 ? 'disabled' : ''} aria-label="Later">${ICON.down}</button></li>`;
     void sibs;
   });
-  return h + '</ol><p class="tiny muted tip" style="margin-top:.5rem">Reordering here keeps each slide in its branch. To move a slide to another section or pillar, use Move to… in the tree.</p>';
+  return h + '</ol><p class="tiny muted tip" style="margin-top:.5rem">To move a slide to another branch, use Move to… in the tree.</p>';
 }
 function renderLinks(p) {
   const links = (p.links || []).filter(l => nodeById(p, l.from) && nodeById(p, l.to));
-  if (!links.length) return `<section class="panel"><h3>Cross-links</h3><p class="panel-sub" style="margin-bottom:0">Use the link button on any item to connect ideas across branches, such as a callback to an earlier analogy. Each link asks for the line the audience will actually hear.</p></section>`;
-  return `<section class="panel"><h3>Cross-links</h3><p class="panel-sub">What does the audience hear at the moment these two connect? If you can't say it in one sentence, the link may exist only in your head.</p>
+  if (!links.length) return `<section class="panel"><h3>Cross-links</h3><p class="panel-sub" style="margin-bottom:0">Use the link button on any item to connect ideas across branches.</p></section>`;
+  return `<section class="panel"><h3>Cross-links</h3><p class="panel-sub">What will the audience hear as these two connect?</p>
     ${links.map(l => `<div class="field"><div class="row small" style="margin-bottom:.25rem"><b>${esc(trimTo(nodeLabel(nodeById(p, l.from)), 40))}</b> ↔ <b>${esc(trimTo(nodeLabel(nodeById(p, l.to)), 40))}</b><span class="grow"></span><button class="btn ghost sm" data-act="linkdel" data-id="${l.id}">Remove</button></div>
       <textarea class="autosize" rows="1" data-lbind="${l.id}" placeholder="The sentence you'll say to connect them">${esc(l.line)}</textarea></div>`).join('')}</section>`;
 }
@@ -1361,7 +1396,7 @@ function slideHead(p, s, num, pl) {
   const flags = slideFlagCount(p, s.id);
   const open = !!ui.open[s.id];
   return `<span class="num">${num || 'B'}</span>
-    <span class="ttl"><span class="q">${String(s.question || '').trim() ? esc(s.question) : '<span class="muted">No audience question yet</span>'}</span>${pl ? `<span class="a">${esc(nodeLabel(pl))}</span>` : ''}</span>
+    <span class="ttl"><span class="q">${String(s.question || '').trim() ? esc(s.question) : '<span class="muted">No audience question yet</span>'}</span>${(() => { const cov = coveredPillars(p, s); return cov.length ? `<span class="a">${esc(cov.map(nodeLabel).join(' + '))}</span>` : ''; })()}</span>
     ${flags ? `<span class="flagcount">${plural(flags, 'flag')}</span>` : ''}
     <span class="prio ${s.priority}">${{ must: 'Must', should: 'Should', could: 'Could' }[s.priority] || ''}</span>
     <span class="small muted">${fmtMin(s.minutes)}</span>${open ? ICON.chevd.replace('<svg', '<svg style="width:1.1em;height:1.1em"') : ICON.chev.replace('<svg', '<svg style="width:1.1em;height:1.1em"')}`;
@@ -1373,25 +1408,26 @@ function renderSlideCard(p, s, num, pl, delivered) {
   const objs = (p.brief.objections || []).filter(o => String(o.text).trim());
   const auds = p.brief.audiences || [];
   const numFlag = slideHasNumber(s);
+  const cov = coveredPillars(p, s), home = pillarOf(p, s), allPill = p.nodes.filter(n => n.type === 'pillar');
   const tagChips = (list, field, cls) => list.map(x => `<button class="chip ${cls || ''}" data-act="tag" data-id="${s.id}" data-f="${field}" data-v="${x.id}" aria-pressed="${(s[field] || []).includes(x.id)}">${esc(trimTo(x.text || x.label, 46))}</button>`).join('');
   const body = !open ? '' : `<div class="sc-body">
-    <div class="field"><label class="f" for="q-${s.id}">Audience question</label><span class="help">The question they haven't asked yet, that this slide answers.</span>
+    <div class="field"><label class="f" for="q-${s.id}">Audience question</label><span class="help">The unasked question this slide answers.</span>
       <input id="q-${s.id}" type="text" data-nbind="question" data-id="${s.id}" value="${esc(s.question)}" placeholder="e.g. Why should we change now?"></div>
-    <div class="field"><label class="f" for="a-${s.id}">Anchor statement</label><span class="help">The claim that answers it. Becomes the slide title. What's the "so what" for this audience?</span>
-      <textarea id="a-${s.id}" class="autosize" rows="1" data-nbind="anchor" data-id="${s.id}" placeholder="A full sentence that makes a point, not a topic">${esc(s.anchor)}</textarea></div>
-    <div class="field"><label class="f">Talking points</label><span class="help">Up to ${settings.thresholds.maxPoints}. Notes to speak from, not a script.</span>
+    <div class="field"><label class="f" for="a-${s.id}">Anchor statement</label><span class="help">${cov.length >= 2 ? esc('One claim covering ' + cov.map(nodeLabel).join(' and ') + '. If it needs "and", split the slide.') : 'Becomes the slide title.'}</span>
+      <textarea id="a-${s.id}" class="autosize" rows="1" data-nbind="anchor" data-id="${s.id}" placeholder="${cov.length >= 2 ? 'One claim that covers ' + esc(cov.map(nodeLabel).join(' and ')) : 'A full sentence that makes a point, not a topic'}">${esc(s.anchor)}</textarea></div>
+    <div class="field"><label class="f">Talking points</label><span class="help">Up to ${settings.thresholds.maxPoints}. Notes, not a script.</span>
       <div class="listedit">${(s.points || []).map((t, i) => `<div class="li"><span class="bullet">•</span><textarea class="autosize" rows="1" data-pt="${s.id}" data-i="${i}" aria-label="Talking point ${i + 1}">${esc(t)}</textarea><button class="btn ghost icon sm" data-act="ptdel" data-id="${s.id}" data-i="${i}" aria-label="Remove point">${ICON.x}</button></div>`).join('')}</div>
       <button class="btn ghost sm" data-act="ptadd" data-id="${s.id}">${ICON.plus} Point</button></div>
     <div class="sc-grid">
       <div class="field"><label class="f" for="ev-${s.id}">Evidence</label><textarea id="ev-${s.id}" class="autosize" rows="1" data-nbind="evidence" data-id="${s.id}" placeholder="What backs up the claim?">${esc(s.evidence)}</textarea>
         <select data-nbind="evType" data-id="${s.id}" aria-label="Evidence type" style="margin-top:.35rem">${opt(EV_TYPES, s.evType)}</select></div>
-      <div class="field ${numFlag ? 'numwarn' : ''}" id="nc-wrap-${s.id}"><label class="f" for="nc-${s.id}">Number context</label><span class="help">${numFlag ? 'This slide has a number. ' : ''}What does it mean to this audience? Compare it to something they know.</span>
+      <div class="field ${numFlag ? 'numwarn' : ''}" id="nc-wrap-${s.id}"><label class="f" for="nc-${s.id}">Number context</label><span class="help">${numFlag ? 'This slide has a number. ' : ''}Compare it to something they know.</span>
         <textarea id="nc-${s.id}" class="autosize" rows="1" data-nbind="numContext" data-id="${s.id}">${esc(s.numContext)}</textarea></div>
       <div class="field"><label class="f" for="vi-${s.id}">Visual</label><textarea id="vi-${s.id}" class="autosize" rows="1" data-nbind="visual" data-id="${s.id}" placeholder="Image, diagram or chart idea">${esc(s.visual)}</textarea></div>
       <div class="field"><label class="f" for="an-${s.id}">Analogy</label><textarea id="an-${s.id}" class="autosize" rows="1" data-nbind="analogy" data-id="${s.id}" placeholder="What familiar thing is this like?">${esc(s.analogy)}</textarea></div>
       <div class="field full"><label class="f" for="en-${s.id}">Engagement question</label><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><textarea id="en-${s.id}" class="autosize grow" rows="1" data-nbind="engage" data-id="${s.id}" placeholder="A question to pull them in">${esc(s.engage)}</textarea>
         <select data-nbind="engageType" data-id="${s.id}" aria-label="Question type" style="width:9.5rem;flex:none">${opt(ENGAGE_TYPES, s.engageType)}</select></div></div>
-      <div class="field full"><label class="f" for="tr-${s.id}">Transition statement${isLast ? ' <span class="muted small">(last slide)</span>' : ''}</label><span class="help">The sentence that bridges into the next slide. Tag how it connects: too many "and then" means a list, not an argument.</span>
+      <div class="field full"><label class="f" for="tr-${s.id}">Transition statement${isLast ? ' <span class="muted small">(last slide)</span>' : ''}</label><span class="help">Bridges into the next slide. Tag how it connects.</span>
         <div class="row" style="flex-wrap:nowrap;align-items:flex-start"><textarea id="tr-${s.id}" class="autosize grow" rows="1" data-nbind="transition" data-id="${s.id}">${esc(s.transition)}</textarea>
         <select data-nbind="transType" data-id="${s.id}" aria-label="Transition type" style="width:9.5rem;flex:none">${opt(TRANS_TYPES, s.transType)}</select></div></div>
     </div>
@@ -1400,6 +1436,9 @@ function renderSlideCard(p, s, num, pl, delivered) {
       <div class="field"><label class="f" for="pr-${s.id}">Priority</label><select id="pr-${s.id}" data-nbind="priority" data-id="${s.id}" data-rerender="1">${opt([['must', 'Must'], ['should', 'Should'], ['could', 'Could']], s.priority)}</select></div>
       <div class="field"><label class="f" for="ro-${s.id}">Role</label><select id="ro-${s.id}" data-nbind="role" data-id="${s.id}" data-rerender="1">${opt(ROLES.map(r => [r.id, r.label]), s.role)}</select></div>
     </div>
+    ${allPill.length && (allPill.length > 1 || !home) ? `<div class="field"><label class="f">Supports pillars</label><span class="help">Only when one claim covers them.</span><div class="chips">${allPill.map(pl => pl === home
+      ? `<button class="chip" aria-pressed="true" disabled title="Where this slide sits in the outline">${esc(trimTo(nodeLabel(pl), 40))} (home)</button>`
+      : `<button class="chip" data-act="tag" data-id="${s.id}" data-f="supports" data-v="${pl.id}" aria-pressed="${(s.supports || []).includes(pl.id)}">${esc(trimTo(nodeLabel(pl), 40))}</button>`).join('')}</div></div>` : ''}
     ${must.length ? `<div class="field"><label class="f">Carries must-land point</label><div class="chips">${tagChips(must, 'mustLand', 'must')}</div></div>` : ''}
     ${objs.length ? `<div class="field"><label class="f">Answers objection</label><div class="chips">${tagChips(objs, 'objections')}</div></div>` : ''}
     ${auds.length > 1 ? `<div class="field"><label class="f">Serves audience</label><span class="help">Leave all off if it serves everyone.</span><div class="chips">${tagChips(auds.map(a => ({ id: a, label: (audById(a) || {}).short })), 'audiences')}</div></div>` : ''}
@@ -1416,7 +1455,7 @@ function stepReview(p) {
   let h = `<section class="panel"><div class="row" style="margin-bottom:.8rem"><label class="toggle grow"><input type="checkbox" data-act="cut" ${ui.cut ? 'checked' : ''}> Cut to essentials (Must slides only)</label>
     <span class="small muted">${plural(sl.length, 'slide')} · ${fmtMin(sl.reduce((a, s) => a + (+s.minutes || 0), 0))} of ${fmtMin(dur)}</span></div>
     ${renderTimebar(p, ui.cut)}
-    <p class="small muted tip" style="margin:0">${ui.cut ? 'This is your fallback if your slot is cut short on the day.' : 'Read only the anchor lines below. If they tell the story on their own, the deck works.'}</p></section>`;
+    <p class="small muted tip" style="margin:0">${ui.cut ? 'Your fallback if the slot is cut short.' : ''}</p></section>`;
   h += `<section class="panel"><h3>Storyboard</h3>`;
   if (!sl.length) h += ui.cut && all.length
     ? `<div class="banner warn">No slides are marked Must, so there is nothing to cut to. Set Priority to Must on the slides that have to stay if your slot is shortened. <button class="btn sm" data-act="step" data-step="slides">Go to Slides</button></div>`
@@ -1467,20 +1506,20 @@ function stepExport(p) {
       <input id="x-author" type="text" data-set="author" value="${esc(settings.author || '')}" placeholder="Shown as the author of exported PowerPoint and Word files" style="max-width:28rem"></div></section>`;
   return `${author}${warn || rem ? `<div class="banner warn">${warn ? plural(warn, 'check') + ' still open' : ''}${warn && rem ? ' and ' : ''}${rem ? plural(rem, 'reminder') + ' not ticked' : ''}. You can export anyway, or review the checks panel first.</div>` : `<div class="banner info">No open checks. Good to go.</div>`}
   <div class="exports">
-    <div class="exp"><h3>PowerPoint</h3><p>Plain, editable slides: anchor statement as the title, talking points as the body, transition and evidence in the speaker notes, and a box where you planned a visual. Apply your school's theme in PowerPoint.</p>
+    <div class="exp"><h3>PowerPoint</h3><p>Editable slides: anchors as titles, points as bullets, the rest in speaker notes. Add your school theme in PowerPoint.</p>
       <div class="opts">${ck('pMust', 'Must slides only')}${ck('pDiv', 'Add section divider slides')}${ck('pBackup', 'Include backup slides at the end')}</div>
       <button class="btn primary" data-act="xpptx">Download PowerPoint</button></div>
-    <div class="exp"><h3>Word outline</h3><p>Built on Word's heading styles: sections, pillars and audience questions show in the Navigation Pane and Outline view, ready to develop into full talking points.</p>
+    <div class="exp"><h3>Word outline</h3><p>Headings for sections, pillars and questions, ready to develop into talking points.</p>
       <div class="opts">${ck('wBrief', 'Start with a summary of the brief')}${ck('wMust', 'Must slides only')}</div>
       <button class="btn primary" data-act="xdocx">Download Word outline</button></div>
-    <div class="exp"><h3>Cue cards</h3><p>A Word file of index cards, four to an A4 page, in Calibri 14pt. Each card leads with the audience question rather than a script. Edit, then print or cut them out.</p>
+    <div class="exp"><h3>Cue cards</h3><p>Word file, four cards per A4 page, led by the audience question.</p>
       <div class="opts">${ck('cQ', 'Questions and anchors only')}${ck('cMust', 'Must slides only')}</div>
       <button class="btn primary" data-act="xcue">Download cue cards</button></div>
-    <div class="exp"><h3>Text outline</h3><p>The full outline as plain text, to paste into an email, a chat or another tool.</p>
+    <div class="exp"><h3>Text outline</h3><p>Plain text to paste anywhere.</p>
       <div class="row"><button class="btn primary" data-act="xtext">Copy text outline</button><button class="btn" data-act="xtextsave">Save as .txt</button></div></div>
-    <div class="exp"><h3>Review pack</h3><p>Your brief, message and outline with a ready-made critique prompt. Paste it into Claude or another AI when you're online for a full coherence and argument-gap review. Nothing is sent from this file.</p>
+    <div class="exp"><h3>Review pack</h3><p>Your plan with a critique prompt, to paste into Claude when online. Nothing is sent from this file.</p>
       <div class="row"><button class="btn primary" data-act="xreview">Copy review pack</button><button class="btn" data-act="xreviewsave">Save as .txt</button></div></div>
-    <div class="exp"><h3>Presentation file</h3><p>Save this presentation as its own file to back it up, move it to another computer, or share the plan. Open it again from the library.</p>
+    <div class="exp"><h3>Presentation file</h3><p>A copy to back up, move or share. Open it from the library.</p>
       <button class="btn primary" data-act="savefile" data-id="${p.id}">Save presentation file</button></div>
   </div>`;
 }
@@ -1508,7 +1547,7 @@ function renderSide(p) {
     ${active.length ? '' : `<div class="allclear">No open checks.</div>`}
     ${groups}
     ${dismissed.length ? `<button class="btn ghost sm" data-act="showdis">${ui.showDismissed ? 'Hide' : 'Show'} ${plural(dismissed.length, 'dismissed check')}</button>` : ''}
-    <p class="tiny muted tip" style="margin-top:.8rem">Checks look for gaps in structure and pattern using simple rules, offline. They can't judge meaning; use the review pack for that.</p></div>
+    <p class="tiny muted tip" style="margin-top:.8rem">Rule-based checks for gaps. For meaning, use the review pack.</p></div>
   </div>`;
 }
 
@@ -1516,15 +1555,15 @@ function renderSide(p) {
 function renderSettings() {
   const s = settings, T = s.thresholds;
   const num = (k, l, step, help) => `<div class="field"><label class="f" for="t-${k}">${l}</label>${help ? `<span class="help">${help}</span>` : ''}<input id="t-${k}" type="number" step="${step || 1}" min="0" data-thr="${k}" value="${esc(T[k])}"></div>`;
-  return `<header class="topbar"><button class="btn ghost sm" data-act="settingsback">${ICON.back} Back</button><div class="brand"><span class="mark"></span>Settings</div><span class="grow"></span></header>
+  return `<header class="topbar"><button class="btn ghost sm" data-act="settingsback">${ICON.back} Back</button><div class="brand"><span class="mark">${PIXEL_CARD}</span>Settings</div><span class="grow"></span></header>
   <div class="settings">
     <section class="panel"><h3>General</h3><div class="grid2">
       <div class="field"><label class="f" for="s-dur">Default duration (minutes)</label><input id="s-dur" type="number" min="1" data-set="defaultDuration" value="${esc(s.defaultDuration)}"></div>
-      <div class="field"><label class="f" for="s-mps">Minutes per slide</label><span class="help">Used to suggest a slide count and as the default for new slides.</span><input id="s-mps" type="number" min="0.5" step="0.5" data-set="minPerSlide" value="${esc(s.minPerSlide)}"></div>
-      <div class="field"><label class="f" for="s-aud">Default audience</label><select id="s-aud" data-set="defaultAudience">${opt([['', 'None']].concat(AUDIENCES.map(a => [a.id, a.label])), s.defaultAudience)}</select></div>
+      <div class="field"><label class="f" for="s-mps">Minutes per slide</label><span class="help">Sets the suggested slide count and new slide length.</span><input id="s-mps" type="number" min="0.5" step="0.5" data-set="minPerSlide" value="${esc(s.minPerSlide)}"></div>
+      <div class="field"><label class="f" for="s-aud">Default audience</label><select id="s-aud" data-set="defaultAudience">${opt([['', 'None']].concat(AUDIENCES.concat(s.customAudiences || []).map(a => [a.id, a.label])), s.defaultAudience)}</select></div>
       <div class="field"><label class="f" for="s-size">Text size</label><select id="s-size" data-set="textSize">${opt([['s', 'Small'], ['m', 'Medium'], ['l', 'Large']], s.textSize)}</select></div>
-      <div class="field"><label class="f" for="s-author">Your name</label><span class="help">Shown as the author of exported PowerPoint and Word files.</span><input id="s-author" type="text" data-set="author" value="${esc(settings.author || '')}"></div>
-      <div class="field"><label class="f" for="s-tips">Tips</label><span class="help">The guidance text under headings and fields. When off, hover over a label to see its tip.</span><select id="s-tips" data-set="tips">${opt([['1', 'Show'], ['', 'Hide']], settings.tips === false ? '' : '1')}</select></div>
+      <div class="field"><label class="f" for="s-author">Your name</label><span class="help">Shown as the author of exported files.</span><input id="s-author" type="text" data-set="author" value="${esc(settings.author || '')}"></div>
+      <div class="field"><label class="f" for="s-tips">Tips</label><span class="help">When off, hover over a label to see its tip.</span><select id="s-tips" data-set="tips">${opt([['1', 'Show'], ['', 'Hide']], settings.tips === false ? '' : '1')}</select></div>
       <div class="field"><label class="f" for="s-theme">Appearance</label><select id="s-theme" data-set="theme">${opt([['auto', 'Match my computer'], ['light', 'Light'], ['dark', 'Dark']], s.theme)}</select></div>
     </div></section>
     <section class="panel"><h3>Check thresholds</h3><div class="grid3">
@@ -1532,8 +1571,8 @@ function renderSettings() {
       ${num('andThenPct', '"And then" transitions (max %)')}${num('timeTol', 'Time budget tolerance (±%)')}${num('mustMax', 'Must slides (max % of slot)')}
       ${num('openMax', 'Opening section (max % of time)')}${num('closeMin', 'Closing section (min % of time)')}
     </div><button class="btn sm ghost" data-act="thrreset">Reset thresholds</button></section>
-    <section class="panel"><h3>Audience presets</h3><p class="panel-sub">These pre-fill the brief for new presentations. Existing presentations keep their own copies.</p>
-      ${AUDIENCES.map(a => { const pr = presetFor(a.id), ov = !!s.presetOverrides[a.id]; return `<details class="profile"><summary>${esc(a.label)}${ov ? ' <span class="backup-tag">Edited</span>' : ''}</summary><div class="pbody"><div class="kv">${PROFILE_FIELDS.map(([k, l]) => `<label for="ov-${a.id}-${k}">${l}</label><textarea id="ov-${a.id}-${k}" class="autosize" rows="1" data-ov="${a.id}" data-f="${k}">${esc(pr[k])}</textarea>`).join('')}</div>${ov ? `<div class="row" style="margin-top:.5rem"><span class="grow"></span><button class="btn sm ghost" data-act="ovreset" data-id="${a.id}">Reset to original</button></div>` : ''}</div></details>`; }).join('')}
+    <section class="panel"><h3>Audience presets</h3><p class="panel-sub">Pre-fill the brief for new presentations.</p>
+      ${AUDIENCES.concat(s.customAudiences || []).map(a => { const pr = presetFor(a.id), ov = !!s.presetOverrides[a.id] && !a.custom; return `<details class="profile"><summary>${esc(a.label)}${a.custom ? ' <span class="backup-tag">Mine</span>' : ''}${ov ? ' <span class="backup-tag">Edited</span>' : ''}</summary><div class="pbody"><div class="kv">${PROFILE_FIELDS.map(([k, l]) => `<label for="ov-${a.id}-${k}">${l}</label><textarea id="ov-${a.id}-${k}" class="autosize" rows="1" data-ov="${a.id}" data-f="${k}" placeholder="${esc(PROFILE_HINTS[k])}">${esc(pr[k])}</textarea>`).join('')}</div>${a.custom ? `<div class="row" style="margin-top:.5rem"><span class="grow"></span><button class="btn sm" data-act="audrename" data-id="${a.id}">Rename</button><button class="btn sm danger" data-act="auddel" data-id="${a.id}">Delete</button></div>` : ov ? `<div class="row" style="margin-top:.5rem"><span class="grow"></span><button class="btn sm ghost" data-act="ovreset" data-id="${a.id}">Reset to original</button></div>` : ''}</div></details>`; }).join('')}
     </section>
     <section class="panel"><h3>My structures</h3>
       ${(s.customStructures || []).length ? (s.customStructures || []).map(c => `<div class="row" style="border-bottom:1px solid var(--line);padding:.45rem 0"><div class="grow"><b>${esc(c.name)}</b><div class="small muted">${esc(c.sections.join(' › '))} · ${esc(structSummary(c))}${c.bestFor ? ' · ' + esc(c.bestFor) : ''}</div></div><button class="btn sm" data-act="structrename" data-id="${c.id}">Rename</button><button class="btn sm danger" data-act="structdel" data-id="${c.id}">Delete</button></div>`).join('') : '<p class="muted small">None yet. Add one here, or use Save as my structure in the Structure step.</p>'}
@@ -1542,7 +1581,7 @@ function renderSettings() {
       <div class="field"><label class="f" for="ns-bf">Best for</label><input id="ns-bf" type="text"></div></div>
       <button class="btn sm" data-act="structadd">${ICON.plus} Add structure</button>
     </section>
-    <section class="panel"><h3>About your data</h3><p class="small">Everything stays in this browser on this computer; nothing is sent anywhere. Chrome and Edge share browser storage between all files opened from your computer, so this planner keeps its data under its own name. Use Back up all in the library to keep a copy.</p></section>
+    <section class="panel"><h3>About your data</h3><p class="small">Everything stays in this browser on this computer; nothing is sent anywhere. Moving or renaming this file keeps your plans in Chrome and Edge. Clearing browsing data, or switching browser or computer, does not, so use Back up all.</p></section>
   </div>`;
 }
 
@@ -1613,7 +1652,7 @@ function refreshLive() {
     const delivered = orderedSlides(p);
     orderedSlides(p, { includeBackup: true }).forEach(s => {
       const h = $('#head-' + s.id); if (h) h.innerHTML = slideHead(p, s, delivered.indexOf(s) + 1, pillarOf(p, s));
-      const w = $('#nc-wrap-' + s.id); if (w) { const f = slideHasNumber(s); w.classList.toggle('numwarn', f); const help = w.querySelector('.help'); if (help) help.textContent = (f ? 'This slide has a number. ' : '') + 'What does it mean to this audience? Compare it to something they know.'; }
+      const w = $('#nc-wrap-' + s.id); if (w) { const f = slideHasNumber(s); w.classList.toggle('numwarn', f); const help = w.querySelector('.help'); if (help) help.textContent = (f ? 'This slide has a number. ' : '') + 'Compare it to something they know.'; }
     });
   }
 }
@@ -1867,11 +1906,46 @@ const ACTIONS = {
     } else {
       b.audiences.push(id);
       if (!b.profiles[id]) b.profiles[id] = presetFor(id);
-      if (!b.primary) { b.primary = id; if (!b.familiarity) b.familiarity = audById(id).fam || ''; }
+      if (!b.primary) { b.primary = id; if (!b.familiarity) b.familiarity = (audById(id) || {}).fam || ''; }
     }
     touch(); renderMain();
   },
-  primary(el, d) { const p = cur(); p.brief.primary = d.id; if (!p.brief.familiarity) p.brief.familiarity = audById(d.id).fam || ''; touch(); renderMain(); },
+  async audadd() {
+    const p = cur(), b = p.brief;
+    const v = await modal({ title: 'Add an audience', body: `<div class="field"><label class="f" for="na-n">Who are they?</label><input id="na-n" type="text" placeholder="e.g. MOE officers, alumni, partner organisations"></div>
+      <label class="chk"><input id="na-k" type="checkbox" checked><span>Keep for future presentations</span></label>`,
+      buttons: [{ label: 'Cancel', value: null }, { label: 'Add audience', cls: 'primary', value: r => { const n = $('#na-n', r).value.trim(); if (!n) { $('#na-n', r).focus(); return undefined; } return { name: n, keep: $('#na-k', r).checked }; } }],
+      onMount: r => $('#na-n', r).addEventListener('keydown', e => { if (e.key === 'Enter') r.querySelector('.mf .btn.primary').click(); }) });
+    if (!v) return;
+    const same = audiencesFor(p).find(a => a.label.toLowerCase() === v.name.toLowerCase());
+    let a = same;
+    if (!a) { a = mkCustomAud(v.name); b.customAud = (b.customAud || []).concat(a); }
+    if (a.custom && v.keep && !(settings.customAudiences || []).some(x => x.id === a.id)) { settings.customAudiences = (settings.customAudiences || []).concat(clone(a)); saveSettings(); }
+    if (a.custom && !(b.customAud || []).some(x => x.id === a.id)) b.customAud = (b.customAud || []).concat(clone(a));
+    if (!b.audiences.includes(a.id)) { b.audiences.push(a.id); b.profiles[a.id] = b.profiles[a.id] || presetFor(a.id); if (!b.primary) b.primary = a.id; }
+    touch(); renderMain(); toast(same ? `"${a.label}" is already in the list, so it is ticked` : `Added "${a.label}"`);
+  },
+  audrm(el, d) {
+    const p = cur(), b = p.brief;
+    b.customAud = (b.customAud || []).filter(a => a.id !== d.id); b.audiences = b.audiences.filter(x => x !== d.id); delete b.profiles[d.id];
+    if (b.primary === d.id) b.primary = b.audiences[0] || '';
+    p.nodes.forEach(n => { if (n.audiences) n.audiences = n.audiences.filter(x => x !== d.id); });
+    touch(); renderMain();
+  },
+  audsave(el, d) { const a = audById(d.id); if (!a) return; const p = cur(); const prof = p.brief.profiles[d.id] || {}; settings.customAudiences = (settings.customAudiences || []).concat(Object.assign(clone(a), prof)); saveSettings(); renderMain(); toast(`"${a.label}" kept for future presentations`); },
+  async audrename(el, d) {
+    const a = (settings.customAudiences || []).find(x => x.id === d.id); if (!a) return;
+    const t = await promptBox('Rename audience', 'Name', a.label); if (!t) return;
+    a.label = a.short = t; library.forEach(q => (q.brief.customAud || []).forEach(x => { if (x.id === d.id) x.label = x.short = t; }));
+    saveSettings(); touch(true); render();
+  },
+  async auddel(el, d) {
+    const a = (settings.customAudiences || []).find(x => x.id === d.id); if (!a) return;
+    if (!(await confirmBox('Delete audience?', `Remove "<b>${esc(a.label)}</b>" from your saved audiences? Presentations that use it keep their own copy.`, 'Delete', true))) return;
+    settings.customAudiences = settings.customAudiences.filter(x => x.id !== d.id); if (settings.defaultAudience === d.id) settings.defaultAudience = '';
+    saveSettings(); render();
+  },
+  primary(el, d) { const p = cur(); p.brief.primary = d.id; if (!p.brief.familiarity) p.brief.familiarity = (audById(d.id) || {}).fam || ''; touch(); renderMain(); },
   addpvp() { const p = cur(); if (!p.brief.audiences.includes('pvp')) { p.brief.audiences.push('pvp'); p.brief.profiles.pvp = p.brief.profiles.pvp || presetFor('pvp'); } touch(); renderMain(); },
   smc(el) { const p = cur(); p.brief.smcLater = el.checked; touch(); renderMain(); },
   purpose(el, d) { const p = cur(); p.brief.purpose = p.brief.purpose === d.id ? '' : d.id; touch(); renderMain(); },
@@ -2067,6 +2141,7 @@ function textOutline(p, opts) {
       out.push(`${ind}[${x.num || 'B'}] ${n.question ? 'Q: ' + n.question : '(no audience question)'}`);
       const sub = ind + '    ';
       if (n.anchor) out.push(`${sub}Anchor: ${n.anchor}`);
+      if (alsoSupports(p, n).length) out.push(`${sub}${x.pillar ? 'Also supports' : 'Supports'}: ${alsoSupports(p, n).map(nodeLabel).join(', ')}`);
       (n.points || []).filter(t => String(t).trim()).forEach(t => out.push(`${sub}• ${t}`));
       if (n.evidence) out.push(`${sub}Evidence${n.evType ? ' (' + evLabel(n.evType) + ')' : ''}: ${n.evidence}`);
       if (n.numContext) out.push(`${sub}Number context: ${n.numContext}`);
@@ -2146,6 +2221,7 @@ async function exportPPTX(p, o) {
       const notes = [];
       if (foot) notes.push('Section: ' + foot);
       if (n.question) notes.push('Audience question: ' + n.question);
+      if (alsoSupports(p, n).length) notes.push(`${x.pillar ? 'Also supports' : 'Supports'}: ${alsoSupports(p, n).map(nodeLabel).join(', ')}`);
       if (n.evidence) notes.push(`Evidence${n.evType ? ' (' + evLabel(n.evType) + ')' : ''}: ${n.evidence}`);
       if (n.numContext) notes.push('Number context: ' + n.numContext);
       if (n.analogy) notes.push('Analogy: ' + n.analogy);
@@ -2226,6 +2302,7 @@ async function exportDOCX(p, o) {
       const h = x.depth === 2 ? 'Heading3' : 'Heading2';
       body.push(wPara(wRun(String(n.question || '').trim() || slideLabel(n)), h));
       body.push(wPara(wRun('Anchor: ', { b: true, color: '56657C' }) + wRun(String(n.anchor || '').trim() || '(to write)', { b: !!n.anchor, i: !n.anchor })));
+      if (alsoSupports(p, n).length) body.push(wLabel(x.pillar ? 'Also supports' : 'Supports', alsoSupports(p, n).map(nodeLabel).join(', ')));
       const pts = (n.points || []).map(t => String(t).trim()).filter(Boolean);
       while (pts.length < 3) pts.push('');
       pts.forEach(t => body.push(wPara(wRun(t), 'ListBullet', BULLET)));
