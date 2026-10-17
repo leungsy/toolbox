@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <meta name="description" content="Personal Collection — a searchable launcher for browser-based tools.">
-  <title>Personal Collection | Sprite Preview</title>
+  <title>Personal Collection | Tools</title>
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=2">
   <style>
@@ -55,14 +55,14 @@
     .gate-footnote strong{color:var(--text)}
     @media(max-width:620px){.gate-card{padding:27px 23px}.school-link{padding:9px}.top-right{gap:6px}.school-link .label{display:none}.lock-button .label{display:none}}
 
-    /* PIXEL COMPANION — local sprite sheets, no external assets or APIs. */
+    /* PIXEL COMPANION — images loaded from ./assets/sprites/; no external APIs. */
     .hero-with-companion {display:grid;grid-template-columns:minmax(0,1fr) 330px;align-items:center;gap:32px;padding:52px 0 35px}
     .hero-with-companion .hero-copy h1{margin:14px 0}
     .hero-with-companion .hero-copy p{max-width:580px}
     .companion {display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:linear-gradient(135deg,#fffdf9 0%,#f4f7fa 100%);border-radius:20px;padding:12px 16px;min-height:178px;box-shadow:var(--shadow);overflow:hidden}
     .companion-figure {position:relative;flex:0 0 144px;display:grid;place-items:center}
     .sprite-art{width:144px;height:144px;background-repeat:no-repeat;background-position:0 0;background-size:288px 144px;image-rendering:pixelated;image-rendering:crisp-edges;animation:sprite-frames 3.2s steps(2) infinite}
-    .sprite-art[data-state=work]{animation-duration:.95s}
+    .sprite-art[data-state=work],.sprite-art[data-state=cheer]{animation-duration:.95s}
     .sprite-art[data-state=sleep]{animation-duration:2s}
     @keyframes sprite-frames{from{background-position:0 0}to{background-position:-288px 0}}
     .companion-detail{display:flex;flex:1;min-width:0;flex-direction:column;gap:10px}
@@ -77,7 +77,17 @@
     .companion-label{font-weight:700;color:var(--text);font-size:12px;margin:0 0 6px}
     @media(max-width:850px){.hero-with-companion{grid-template-columns:minmax(0,1fr) 300px;gap:12px}.companion{padding:8px;gap:3px}.companion-figure{flex-basis:130px}}
     @media(max-width:660px){.hero-with-companion{grid-template-columns:minmax(0,1fr);padding:40px 0 25px;gap:22px}.companion{width:100%;max-width:430px;min-height:140px;padding:6px 17px}.companion-figure{flex-basis:120px}.sprite-art{width:120px;height:120px;background-size:240px 120px;animation-name:sprite-frames-mobile}@keyframes sprite-frames-mobile{from{background-position:0 0}to{background-position:-240px 0}}}
-    @media(prefers-reduced-motion:reduce){.sprite-art{animation:none!important}}
+    /* Keep the original, subtle two-frame sprite motion. */
+    .gate-companion{display:flex;align-items:center;gap:12px;margin:-12px 0 20px;min-height:106px;padding:8px 10px;background:var(--surface2);border:1px solid var(--line);border-radius:14px}
+    .gate-sprite-art{flex:0 0 100px;width:100px;height:100px;background-size:200px 100px;animation-name:gate-sprite-frames}
+    @keyframes gate-sprite-frames{from{background-position:0 0}to{background-position:-200px 0}}
+    .gate-companion-words{display:flex;flex-direction:column;gap:8px;min-width:0}
+    .gate-companion-label{font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+    .gate-companion-bubble{font-size:12px;line-height:1.45;padding:9px 11px;border:1px solid var(--line);background:var(--surface);border-radius:11px;color:var(--text)}
+    .sprite-sleep-z{position:absolute;top:14px;right:9px;color:var(--muted);font-size:13px;font-weight:700;letter-spacing:2px;animation:sleep-z-float 2.6s ease-in-out infinite;pointer-events:none}
+    .sprite-sleep-z[hidden]{display:none!important}
+    @keyframes sleep-z-float{0%,100%{opacity:.5;transform:translateY(3px)}50%{opacity:1;transform:translateY(-2px)}}
+    @media(prefers-reduced-motion:reduce){.sprite-art,.sprite-sleep-z{animation:none!important}}
   </style>
 </head>
 <body>
@@ -85,6 +95,10 @@
   <div id="passcodeGate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
     <form id="passcodeForm" class="gate-card" autocomplete="off">
       <div class="gate-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M7.5 10V7a4.5 4.5 0 0 1 9 0v3"/><circle cx="12" cy="15.5" r="1"/></svg></div>
+      <div class="gate-companion" aria-label="Pixel assistant greeting">
+        <div id="gateSpriteArt" class="sprite-art gate-sprite-art" data-state="idle" aria-hidden="true"></div>
+        <div class="gate-companion-words"><span class="gate-companion-label">Your companion</span><span id="gateCompanionBubble" class="gate-companion-bubble">Welcome back!</span></div>
+      </div>
       <h1 id="gateTitle">Personal Tool Hub</h1>
       <p>Enter your passcode to open your personal workspace.</p>
       <label for="passcodeInput">Passcode</label>
@@ -100,8 +114,8 @@
   <main class="shell"><section class="hero hero-with-companion" aria-label="Personal Collection introduction">
     <div class="hero-copy"><div class="eyebrow">Personal Collection</div><h1>My Tools</h1><p>A personal collection of browser-based utilities. Save/Export your work before closing an app.</p></div>
     <aside class="companion" aria-label="Pixel assistant">
-      <div class="companion-figure" aria-hidden="true"><div id="spriteArt" class="sprite-art" data-state="idle"></div></div>
-      <div class="companion-detail"><div id="companionName" class="companion-name">Your companion</div><div id="companionBubble" class="companion-bubble" role="status" aria-live="polite">Ready when you are. Find a tool below!</div><div class="companion-tip">Rests after 3 minutes of inactivity.</div></div>
+      <div class="companion-figure" aria-hidden="true"><div id="spriteArt" class="sprite-art" data-state="idle"></div><span id="sleepZs" class="sprite-sleep-z" hidden>Zzz</span></div>
+      <div class="companion-detail"><div id="companionName" class="companion-name">Your companion</div><div id="companionBubble" class="companion-bubble" role="status" aria-live="polite">Ready when you are. Find a tool below!</div></div>
     </aside>
   </section>
   <section aria-label="Tool collection"><div class="controls" id="controls"><label class="search"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="Search tools, categories or tags..." autocomplete="off" aria-label="Search tools"></label><div class="filters" id="filters" aria-label="Filter by category"></div></div><div class="section-header"><h2>Explore tools</h2><span id="count" class="count" aria-live="polite"></span></div><div class="grid" id="appGrid"></div><div class="empty" id="empty"><strong>No matching tools</strong>Try another keyword or category.</div></section></main>
@@ -109,7 +123,7 @@
     <div class="shell">
       <nav class="footer-links" aria-label="Other collections">
         <span class="footer-links-label">Other collections</span>
-        <a id="studentCollectionLink" href="leungsy.github.io/students" target="_blank" rel="noopener noreferrer">Student-facing tools <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+        <a id="studentCollectionLink" href="#" target="_blank" rel="noopener noreferrer">Student-facing tools <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
         <a id="funCollectionLink" href="#" target="_blank" rel="noopener noreferrer">Just for fun! <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
       </nav>
       <div class="footer-row copyright-footer"><span>© <span id="year"></span> Personal Hub · For personal use</span><span>Updated Oct 2026</span></div>
@@ -126,12 +140,12 @@
     // - Empty app URLs display a placeholder, not a broken link.
     // ==============================================================
     const SETTINGS = {
-      PASSCODE: 'abcd3103',             // TEMPORARY PREVIEW PASSCODE — change before publishing
+      PASSCODE: 'demo123',             // TEMPORARY PREVIEW PASSCODE — change before publishing
       PASSCODE_VERSION: '1',              // Increment when changing your passcode
-      SCHOOL_TOOL_HUB_URL: '',            // e.g. 'https://leungsy.github.io/toolbox/'
+      SCHOOL_TOOL_HUB_URL: '',            // e.g. 'https://username.github.io/my-tools/'
       PREZYASSIST_URL: './prezyassist/',
-      CLASS_SCREEN_URL: './crscreen/',                // Optional override: './crscreen/index.html' or full URL
-      HALP_URL: './halp/'
+      CLASS_SCREEN_URL: './crscreen/'                // Optional override: './crscreen/index.html' or full URL
+      HALP_URL: './halp/'   
     };
 
     // Construct links into the School Toolbox repository.
@@ -217,7 +231,7 @@
       for (const app of matches) {
         const card = document.createElement(app.url ? 'a' : 'div');
         card.className = 'app' + (app.url ? '' : ' unavailable');
-        if (app.url) { card.href = app.url; if (/^https:\/\//i.test(app.url)) { card.target = '_blank'; card.rel = 'noopener noreferrer'; } }
+        if (app.url) { card.href = app.url; card.target = '_blank'; card.rel = 'noopener noreferrer'; }
         const top = document.createElement('div'); top.className = 'app-top';
         const icon = document.createElement('div'); icon.className = 'app-icon'; icon.setAttribute('aria-hidden', 'true');
         if (app.icon === 'storyboard') {
@@ -239,7 +253,17 @@
         const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = app.category;
         const updated = document.createElement('span'); updated.className = 'last-updated'; updated.textContent = 'Last updated: ' + (app.lastUpdated || 'DATE');
         meta.append(tag, updated);
-        card.append(top, title, desc, meta); grid.append(card);
+        card.append(top, title, desc, meta);
+        // Hover/focus celebrates; links still open immediately in a new tab.
+        if (app.url) {
+          card.addEventListener('pointerenter', showCompanionCheer);
+          card.addEventListener('pointerleave', stopCompanionCheer);
+          card.addEventListener('focus', showCompanionCheer);
+          card.addEventListener('blur', stopCompanionCheer);
+          // A clicked card may retain focus after its new tab opens; release it.
+          card.addEventListener('click', () => { if (document.activeElement === card) card.blur(); });
+        }
+        grid.append(card);
       }
       document.getElementById('count').textContent = `${matches.length} ${matches.length === 1 ? 'tool' : 'tools'}`;
       document.getElementById('empty').style.display = matches.length ? 'none' : 'block';
@@ -298,6 +322,19 @@
       document.getElementById('privateContent').setAttribute('aria-hidden', String(locked));
       gate.hidden = !locked;
       if (locked) passcodeInput.focus();
+      // Inactivity only sleeps the sprite. It never locks the workspace.
+      if (window.__companionReady) {
+        if (locked) {
+          clearTimeout(companionSleepTimer);
+          clearTimeout(companionWorkTimer);
+          companionState = 'idle';
+          refreshCompanion();
+        } else {
+          companionState = 'idle';
+          refreshCompanion();
+          resetCompanionIdle();
+        }
+      }
     }
     if (!configured) {
       gateMessage.textContent = 'Setup required: edit SETTINGS.PASSCODE in this HTML file before publishing.';
@@ -328,69 +365,157 @@
     });
     lockButton.addEventListener('click', () => { writeUnlocked(false); setLocked(true); });
     // PIXEL COMPANION: Hedgehog in light theme, badger in dark theme.
-    // All six sprite sheets are locally hosted in ./assets/sprites/.
-    // No external scripts, animation libraries, or server calls.
+    // Sprite files are loaded locally from ./assets/sprites/.
+    // No remote scripts, animation libraries, or server calls.
     const spriteArt = document.getElementById('spriteArt');
     const companionName = document.getElementById('companionName');
     const companionBubble = document.getElementById('companionBubble');
-    const SPRITE_BASE = './assets/sprites';
-    const SLEEP_AFTER_MS = 3 * 60 * 1000;
+    // All sprite art lives in ./assets/sprites/ rather than inside this HTML.
+    // Swap the PNG files to update the characters without editing the page.
+    // Each file is currently a 96 x 48 PNG sprite sheet (2 frames, 48 x 48 each).
+    // For browser cache refreshes after replacing assets, increment the version.
+    const SPRITE_BASE = './assets/sprites/';
+    const SPRITE_VERSION = '1';
+    function spriteUrl(animal, mode) {
+      return `${SPRITE_BASE}${animal}-${mode}.png?v=${SPRITE_VERSION}`;
+    }
+    // If a sprite file is missing or fails, use its idle state as a fallback.
+    function setSpriteImage(element, animal, mode) {
+      const url = spriteUrl(animal, mode);
+      if (element.dataset.requestedSprite !== url) {
+        element.dataset.requestedSprite = url;
+        element.style.backgroundImage = `url("${url}")`;
+      }
+    }
+    // Companion behaviour: existing sprite art, one-minute sleep, and playful bubbles.
+    // The hover cheer deliberately uses the existing 'work' sprite frames.
+    const gateSpriteArt = document.getElementById('gateSpriteArt');
+    const gateCompanionBubble = document.getElementById('gateCompanionBubble');
+    const sleepZs = document.getElementById('sleepZs');
+    const SLEEP_AFTER_MS = 60 * 1000;
+    const BUBBLE_INTERVAL_MS = 14 * 1000;
+    const IDLE_MESSAGES = {
+      hedgehog: ['Ready when you are!', 'Living on the edge!', "Let's get to the point.", 'Stay sharp!', 'Small spikes, big ideas.', '', 'A little prickly, but productive.'],
+      badger: ['Ready when you are!', 'Digging into the details.', "Let's dig deeper!", 'On the scent of a good idea.', 'No badgering, just brainstorming.', '', 'Time to get things sorted.']
+    };
     let companionState = 'idle';
     let companionSleepTimer;
     let companionWorkTimer;
+    let wakeTimer;
     let lastMovementAt = 0;
+    let idleMessageIndex = 0;
+    let wakingMessage = false;
+    let cheerTimer;
 
+    function isHubLocked() {
+      return document.documentElement.classList.contains('hub-locked');
+    }
+    function currentAnimal() {
+      return document.documentElement.dataset.theme === 'dark' ? 'badger' : 'hedgehog';
+    }
     function refreshCompanion() {
-      const animal = document.documentElement.dataset.theme === 'dark' ? 'badger' : 'hedgehog';
-      spriteArt.style.backgroundImage = `url("${SPRITE_BASE}/${animal}-${companionState}.png")`;
-      spriteArt.dataset.state = companionState;
+      const animal = currentAnimal();
+      const frame = companionState === 'idle' && wakingMessage ? 'wake' : companionState;
+      setSpriteImage(spriteArt, animal, frame);
+      spriteArt.dataset.state = frame;
       companionName.textContent = animal === 'badger' ? 'Badger assistant' : 'Hedgehog assistant';
-      companionBubble.textContent = companionState === 'sleep'
-        ? 'Zzz… taking a little break.'
-        : companionState === 'work'
-          ? 'Finding the right tool…'
-          : 'Ready when you are. Find a tool below!';
+
+      // Show the same unmodified character on the passcode screen.
+      setSpriteImage(gateSpriteArt, animal, 'idle');
+      gateCompanionBubble.textContent = animal === 'badger' ? 'Badger on duty!' : 'Hedgehog on duty!';
+
+      sleepZs.hidden = companionState !== 'sleep';
+      const messages = IDLE_MESSAGES[animal];
+      const bubbleText = companionState === 'sleep' ? ''
+        : companionState === 'cheer' ? "Let's go!"
+        : companionState === 'work' ? 'Looking for tools…'
+        : wakingMessage ? 'Back again?'
+        : messages[idleMessageIndex % messages.length];
+      // Use visibility rather than display:none to avoid layout shifts.
+      companionBubble.textContent = bubbleText || ' ';
+      companionBubble.style.visibility = bubbleText ? 'visible' : 'hidden';
     }
     window.refreshCompanion = refreshCompanion;
     window.__companionReady = true;
-    function setCompanionState(next) { companionState = next; refreshCompanion(); }
+    function setCompanionState(next) {
+      companionState = next;
+      if (next !== 'idle') {
+        wakingMessage = false;
+        clearTimeout(wakeTimer);
+      }
+      refreshCompanion();
+    }
     function resetCompanionIdle() {
       clearTimeout(companionSleepTimer);
-      if (companionState === 'sleep') setCompanionState('idle');
-      companionSleepTimer = setTimeout(() => { clearTimeout(companionWorkTimer); setCompanionState('sleep'); }, SLEEP_AFTER_MS);
+      if (isHubLocked()) return;
+      if (companionState === 'sleep') {
+        companionState = 'idle';
+        wakingMessage = true;
+        refreshCompanion();
+        clearTimeout(wakeTimer);
+        wakeTimer = setTimeout(() => {
+          wakingMessage = false;
+          if (companionState === 'idle') refreshCompanion();
+        }, 4200);
+      }
+      companionSleepTimer = setTimeout(() => {
+        clearTimeout(companionWorkTimer);
+        clearTimeout(cheerTimer);
+        setCompanionState('sleep');
+      }, SLEEP_AFTER_MS);
+    }
+    function showCompanionCheer() {
+      if (isHubLocked()) return;
+      clearTimeout(companionWorkTimer);
+      clearTimeout(cheerTimer);
+      setCompanionState('cheer');
+      resetCompanionIdle();
+      // The reaction is a short greeting, not a permanent state.
+      // This also avoids stuck cheer states when a new tab takes focus.
+      cheerTimer = setTimeout(() => {
+        if (companionState === 'cheer') setCompanionState('idle');
+      }, 2600);
+    }
+    function stopCompanionCheer() {
+      clearTimeout(cheerTimer);
+      if (isHubLocked() || companionState !== 'cheer') return;
+      setCompanionState('idle');
     }
     function companionActivity() {
-      if (document.documentElement.classList.contains('hub-locked')) return;
+      if (isHubLocked()) return;
       resetCompanionIdle();
     }
-    // Throttle pointer movement to avoid excessive timer work.
     document.addEventListener('pointermove', () => {
       const now = Date.now();
       if (now - lastMovementAt < 1000) return;
       lastMovementAt = now;
       companionActivity();
     }, {passive:true});
-    for (const eventName of ['pointerdown','keydown','scroll','touchstart']) {
+    for (const eventName of ['pointerdown', 'keydown', 'scroll', 'touchstart']) {
       document.addEventListener(eventName, companionActivity, {passive:true});
     }
     search.addEventListener('input', () => {
-      if (document.documentElement.classList.contains('hub-locked')) return;
+      if (isHubLocked()) return;
+      clearTimeout(cheerTimer);
       setCompanionState('work');
       resetCompanionIdle();
       clearTimeout(companionWorkTimer);
-      companionWorkTimer = setTimeout(() => { if (companionState !== 'sleep') setCompanionState('idle'); }, 1600);
+      companionWorkTimer = setTimeout(() => {
+        if (companionState === 'work') setCompanionState('idle');
+      }, 1600);
     });
+    // Idle phrases rotate independently of sprite animation. No network calls.
+    setInterval(() => {
+      if (isHubLocked() || companionState !== 'idle' || wakingMessage) return;
+      idleMessageIndex = (idleMessageIndex + 1) % IDLE_MESSAGES[currentAnimal()].length;
+      refreshCompanion();
+    }, BUBBLE_INTERVAL_MS);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) companionActivity();
     });
-    // Preload local states so no extra request is needed when switching themes/animations.
-    for (const animal of ['hedgehog','badger']) {
-      for (const state of ['idle','work','sleep']) {
-        const img = new Image(); img.src = `${SPRITE_BASE}/${animal}-${state}.png`;
-      }
-    }
+    // Sprite state images load from the local assets/sprites folder.
     refreshCompanion();
-    resetCompanionIdle();
+    if (!isHubLocked()) resetCompanionIdle();
 
   </script>
 </body>
